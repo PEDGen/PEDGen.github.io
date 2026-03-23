@@ -13,13 +13,9 @@ This was motivated by GenAI's capacity to generate code from natural language de
 
 ## Features (v002)
 
-Supports creating diagrams for
-  - array -> scalar
-  - array -> array
-  - scalar -> array
-  - scalar -> scalar
+Supports creating diagrams for functions that receive arrays and/or scalars and return arrays and/or scalars.
 
-Also supports functions with multiple arguments (e.g. Argument 1 = array, Argument 2 = scalar).
+Supports functions with multiple arguments (e.g. Argument 1 = array, Argument 2 = scalar).
 
 ## Run locally
 
@@ -37,7 +33,7 @@ Open `index.html` in your browser.
 
 Second example (2 arguments: array + scalar)
 - Function name: `scaleArray`
-- Additional notes: `Multiply each array element by the scalar argument.`
+- Additional notes: `Consider both input arguments: how are they interacting to obtain the expected output value?`
 - Argument count: `2`
 - Argument 1 kind: `Array`
 - Argument 2 kind: `Scalar`
@@ -48,3 +44,5 @@ Second example (2 arguments: array + scalar)
 ## Reference
 
 Cipriano, B. P., Alves, P., & Denny, P. (2024, September). A Picture is Worth a Thousand Words: Exploring Diagram and Video-Based OOP Exercises to Counter LLM Over-Reliance. In European Conference on Technology Enhanced Learning (pp. 75-89). Cham: Springer Nature Switzerland.
+
+https://arxiv.org/pdf/2403.08396
