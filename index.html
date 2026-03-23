@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Exercise Diagram Generator</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;600;700&family=Bricolage+Grotesque:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <header class="hero">
+      <p class="kicker">Diagram-first programming exercises</p>
+      <h1>Exercise Diagram Generator</h1>
+      <p class="sub">Provide structured exercise data and generate stacked, black-and-white function diagrams with PNG export.</p>
+    </header>
+
+    <section class="card form-card">
+      <h2>Exercise Input</h2>
+      <form id="exercise-form">
+        <div class="grid two">
+          <label>
+            Function name <span class="required-star">*</span>
+            <input id="function-name" name="functionName" type="text" placeholder="f03" required>
+          </label>
+          <label>
+            Additional notes <span class="field-optional">(optional)</span>
+            <input id="additional-notes" name="additionalNotes" type="text" placeholder="Any extra context for this exercise">
+          </label>
+        </div>
+
+        <div class="grid two">
+          <label>
+            Argument count
+            <input id="argument-count" name="argumentCount" type="number" min="0" step="1" value="1">
+          </label>
+          <label>
+            Output kind
+            <select id="output-kind" name="outputKind">
+              <option value="scalar">Scalar</option>
+              <option value="array">Array</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="examples-head">
+          <h3>Arguments</h3>
+        </div>
+
+        <div id="argument-definitions" class="argument-definitions"></div>
+
+        <div class="examples-head">
+          <h3>Examples</h3>
+          <button id="add-example" class="ghost" type="button">Add example</button>
+        </div>
+
+        <div id="examples" class="examples"></div>
+
+        <div class="actions">
+          <button type="submit">Generate diagram</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="card result-card">
+      <div class="result-head">
+        <h2>Diagram Output</h2>
+        <button id="download-png" type="button" disabled>Download PNG</button>
+      </div>
+      <p id="status" class="status">Fill the form and generate your first diagram.</p>
+      <div class="canvas-wrap">
+        <canvas id="diagram-canvas" width="960" height="320" aria-label="Generated exercise diagram"></canvas>
+      </div>
+    </section>
+  </main>
+
+  <template id="example-template">
+    <div class="example-row">
+      <div class="example-inputs"></div>
+      <label>
+        Output
+        <input class="example-output" type="text" placeholder="3">
+      </label>
+      <button class="remove-example ghost" type="button">Remove</button>
+    </div>
+  </template>
+
+  <template id="argument-definition-template">
+    <div class="argument-definition">
+      <label>
+        <span class="argument-title"></span>
+        <select class="argument-kind">
+          <option value="array">Array</option>
+          <option value="scalar">Scalar</option>
+        </select>
+      </label>
+    </div>
+  </template>
+
+  <script src="app.js"></script>
+</body>
+</html>
