@@ -84,12 +84,26 @@ function handleSubmit(event) {
     }
 
     drawDiagram(functionName, argumentKinds, examples, additionalNotes);
-    statusEl.textContent = `Generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`;
+    setStatus(`Generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
     downloadPngBtn.disabled = false;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to generate diagram.";
-    statusEl.textContent = message;
+    setStatus(message, "error");
     downloadPngBtn.disabled = true;
+  }
+}
+
+function setStatus(message, variant) {
+  statusEl.textContent = message;
+  statusEl.classList.remove("status--success", "status--error");
+
+  if (variant === "success") {
+    statusEl.classList.add("status--success");
+    return;
+  }
+
+  if (variant === "error") {
+    statusEl.classList.add("status--error");
   }
 }
 

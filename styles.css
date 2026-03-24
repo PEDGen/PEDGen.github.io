@@ -197,6 +197,15 @@ button.ghost {
   font-size: 0.95rem;
 }
 
+.status--success {
+  color: #1b6b33;
+}
+
+.status--error {
+  color: #b00020;
+  font-weight: 700;
+}
+
 .canvas-wrap {
   overflow: auto;
   border: 2px dashed #1f2937;
