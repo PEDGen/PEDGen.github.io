@@ -220,6 +220,30 @@ button.ghost {
   background: #ffffff;
 }
 
+.reference-footer {
+  width: min(1100px, 94vw);
+  margin: 0 auto 2rem;
+  padding: 0.9rem 1rem;
+  border-top: 2px solid #111111;
+  color: #2b3240;
+  font-size: 0.86rem;
+  line-height: 1.4;
+}
+
+.reference-footer p {
+  margin: 0;
+}
+
+.reference-footer p + p {
+  margin-top: 0.5rem;
+}
+
+.reference-footer a {
+  color: #0c4a7a;
+  font-weight: 600;
+  word-break: break-all;
+}
+
 @media (max-width: 760px) {
   .grid.two {
     grid-template-columns: 1fr;
