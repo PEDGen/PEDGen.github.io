@@ -11,7 +11,7 @@ This tool was built to generate diagrams that replace natural language programmi
 
 This was motivated by GenAI's capacity to generate code from natural language descriptions. See the referenced paper for more information.
 
-## Features (v002)
+## Features (v003)
 
 Supports creating diagrams for
   - array -> scalar
@@ -22,9 +22,52 @@ Supports creating diagrams for
 
 Also supports functions with multiple arguments (e.g. Argument 1 = array, Argument 2 = scalar).
 
+Single-function exercises can also be exported to and imported from JSON files.
+
 ## Run locally
 
 Open `index.html` in your browser.
+
+## JSON import / export
+
+The app supports exporting the current single-function exercise form to a JSON file and importing it back later.
+
+Current JSON fields:
+
+- `schemaVersion`: document format version for single-function JSON files
+- `mode`: currently always `single-function`
+- `toolVersion`: current app version string
+- `functionName`: function name as typed in the form
+- `additionalNotes`: optional notes text
+- `argumentCount`: number of arguments
+- `argumentKinds`: array of argument kinds (`array` or `scalar`)
+- `outputKind`: `array` or `scalar`
+- `examples`: array of example entries with `inputs` and `output`
+
+Example JSON:
+
+```json
+{
+  "schemaVersion": 1,
+  "mode": "single-function",
+  "toolVersion": "v003",
+  "functionName": "f04",
+  "additionalNotes": "Multiply each array element by the scalar argument.",
+  "argumentCount": 2,
+  "argumentKinds": ["array", "scalar"],
+  "outputKind": "array",
+  "examples": [
+    {
+      "inputs": ["{1, 2, 3}", "2"],
+      "output": "{2, 4, 6}"
+    },
+    {
+      "inputs": ["{-1, 0, 4}", "3"],
+      "output": "{-3, 0, 12}"
+    }
+  ]
+}
+```
 
 ## Example data
 

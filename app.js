@@ -1,6 +1,11 @@
 const form = document.getElementById("exercise-form");
+const functionNameInput = document.getElementById("function-name");
+const additionalNotesInput = document.getElementById("additional-notes");
 const examplesContainer = document.getElementById("examples");
 const addExampleBtn = document.getElementById("add-example");
+const exportJsonBtn = document.getElementById("export-json");
+const importJsonBtn = document.getElementById("import-json");
+const importJsonFileInput = document.getElementById("import-json-file");
 const exampleTemplate = document.getElementById("example-template");
 const argumentCountInput = document.getElementById("argument-count");
 const argumentDefinitionsContainer = document.getElementById("argument-definitions");
@@ -9,18 +14,31 @@ const outputKindSelect = document.getElementById("output-kind");
 const canvas = document.getElementById("diagram-canvas");
 const statusEl = document.getElementById("status");
 const downloadPngBtn = document.getElementById("download-png");
+const toolVersionEl = document.getElementById("tool-version");
+
+const TOOL_VERSION = "v003";
+const SINGLE_FUNCTION_SCHEMA_VERSION = 1;
 
 const ctx = canvas.getContext("2d");
 
 bootstrap();
 
 function bootstrap() {
+  toolVersionEl.textContent = TOOL_VERSION;
   syncArgumentDefinitions(getArgumentCount());
   addExampleRow();
 
   addExampleBtn.addEventListener("click", () => {
     addExampleRow();
   });
+
+  exportJsonBtn.addEventListener("click", handleExportJson);
+
+  importJsonBtn.addEventListener("click", () => {
+    importJsonFileInput.click();
+  });
+
+  importJsonFileInput.addEventListener("change", handleImportJsonFile);
 
   argumentCountInput.addEventListener("change", () => {
     syncArgumentDefinitions(getArgumentCount());
@@ -69,27 +87,77 @@ function handleSubmit(event) {
   event.preventDefault();
 
   try {
-    const functionName = document.getElementById("function-name").value.trim();
-    const additionalNotes = document.getElementById("additional-notes").value.trim();
-    const argumentKinds = getArgumentKinds();
-    const outputKind = outputKindSelect.value;
-
-    if (!functionName) {
-      throw new Error("Function name is required.");
-    }
-
-    const examples = collectExamples(argumentKinds, outputKind);
-    if (examples.length === 0) {
-      throw new Error("Add at least one valid example.");
-    }
-
-    drawDiagram(functionName, argumentKinds, examples, additionalNotes);
+    const examples = generateDiagramFromCurrentForm();
     setStatus(`Generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
     downloadPngBtn.disabled = false;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to generate diagram.";
     setStatus(message, "error");
     downloadPngBtn.disabled = true;
+  }
+}
+
+function generateDiagramFromCurrentForm() {
+  const functionName = functionNameInput.value.trim();
+  const additionalNotes = additionalNotesInput.value.trim();
+  const argumentKinds = getArgumentKinds();
+  const outputKind = outputKindSelect.value;
+
+  if (!functionName) {
+    throw new Error("Function name is required.");
+  }
+
+  const examples = collectExamples(argumentKinds, outputKind);
+  if (examples.length === 0) {
+    throw new Error("Add at least one valid example.");
+  }
+
+  drawDiagram(functionName, argumentKinds, examples, additionalNotes);
+  return examples;
+}
+
+function handleExportJson() {
+  const payload = collectSingleFunctionDocument();
+  const fileName = `${slugifyFileName(payload.functionName || "single-function-exercise")}.json`;
+  const fileText = JSON.stringify(payload, null, 2);
+  const blob = new Blob([fileText], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.download = fileName;
+  link.href = url;
+  link.click();
+  URL.revokeObjectURL(url);
+
+  setStatus("Exported JSON file.", "success");
+}
+
+async function handleImportJsonFile(event) {
+  const file = event.target.files?.[0];
+
+  if (!file) {
+    return;
+  }
+
+  try {
+    const fileText = await file.text();
+    const payload = JSON.parse(fileText);
+    applySingleFunctionDocument(payload);
+
+    try {
+      const examples = generateDiagramFromCurrentForm();
+      downloadPngBtn.disabled = false;
+      setStatus(`Imported JSON and generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
+    } catch {
+      downloadPngBtn.disabled = true;
+      setStatus("Imported JSON. Review the form and generate the diagram when ready.", "success");
+    }
+  } catch (error) {
+    downloadPngBtn.disabled = true;
+    const message = error instanceof Error ? error.message : "Unable to import JSON file.";
+    setStatus(message, "error");
+  } finally {
+    event.target.value = "";
   }
 }
 
@@ -128,6 +196,108 @@ function syncArgumentDefinitions(count) {
 
 function getArgumentKinds() {
   return [...argumentDefinitionsContainer.querySelectorAll(".argument-kind")].map((el) => el.value);
+}
+
+function collectSingleFunctionDocument() {
+  const argumentKinds = getArgumentKinds();
+  const examples = [...examplesContainer.querySelectorAll(".example-row")].map((row) => ({
+    inputs: [...row.querySelectorAll(".example-arg-input")].map((input) => input.value),
+    output: row.querySelector(".example-output").value,
+  }));
+
+  return {
+    schemaVersion: SINGLE_FUNCTION_SCHEMA_VERSION,
+    mode: "single-function",
+    toolVersion: TOOL_VERSION,
+    functionName: functionNameInput.value,
+    additionalNotes: additionalNotesInput.value,
+    argumentCount: getArgumentCount(),
+    argumentKinds,
+    outputKind: outputKindSelect.value,
+    examples,
+  };
+}
+
+function applySingleFunctionDocument(payload) {
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    throw new Error("Imported JSON must be an object.");
+  }
+
+  if (payload.mode !== "single-function") {
+    throw new Error("This JSON file is not a single-function exercise document.");
+  }
+
+  const functionName = readImportedString(payload.functionName);
+  const additionalNotes = readImportedString(payload.additionalNotes);
+  const outputKind = payload.outputKind === "array" ? "array" : "scalar";
+  const argumentKinds = Array.isArray(payload.argumentKinds)
+    ? payload.argumentKinds.map(normalizeImportedArgumentKind)
+    : [];
+  const normalizedExamples = Array.isArray(payload.examples)
+    ? payload.examples.map(normalizeImportedExample)
+    : [];
+
+  const normalizedArgumentCount = Math.max(
+    0,
+    Number.isInteger(payload.argumentCount) ? payload.argumentCount : argumentKinds.length
+  );
+  const finalArgumentCount = Math.max(
+    normalizedArgumentCount,
+    argumentKinds.length,
+    ...normalizedExamples.map((example) => example.inputs.length),
+    0
+  );
+
+  const finalArgumentKinds = Array.from({ length: finalArgumentCount }, (_, index) => argumentKinds[index] || "array");
+
+  functionNameInput.value = functionName;
+  additionalNotesInput.value = additionalNotes;
+  argumentCountInput.value = String(finalArgumentCount);
+  outputKindSelect.value = outputKind;
+
+  syncArgumentDefinitions(finalArgumentCount);
+  [...argumentDefinitionsContainer.querySelectorAll(".argument-kind")].forEach((select, index) => {
+    select.value = finalArgumentKinds[index];
+  });
+
+  examplesContainer.innerHTML = "";
+
+  if (normalizedExamples.length === 0) {
+    addExampleRow();
+    return;
+  }
+
+  normalizedExamples.forEach((example) => {
+    addExampleRow(example.inputs, example.output);
+  });
+}
+
+function readImportedString(value) {
+  return typeof value === "string" ? value : "";
+}
+
+function normalizeImportedArgumentKind(value) {
+  return value === "scalar" ? "scalar" : "array";
+}
+
+function normalizeImportedExample(example) {
+  if (!example || typeof example !== "object" || Array.isArray(example)) {
+    return { inputs: [], output: "" };
+  }
+
+  const inputs = Array.isArray(example.inputs) ? example.inputs.map((value) => String(value ?? "")) : [];
+  return {
+    inputs,
+    output: String(example.output ?? ""),
+  };
+}
+
+function slugifyFileName(value) {
+  return String(value)
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "single-function-exercise";
 }
 
 function addExampleRow(existingInputValues = [], existingOutputValue = "") {
