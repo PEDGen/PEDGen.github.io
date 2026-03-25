@@ -567,7 +567,7 @@ function computeLayout(argumentCount, examples, additionalNotes) {
   const cellGap = 8;
   const leftMargin = 28;
   const rightMargin = 28;
-  const arrowGap = 22;
+  const arrowGap = 52;
   const boxWidth = 160;
   const boxHeight = 58;
   const laneGap = 62;
@@ -787,27 +787,28 @@ function drawAdditionalNotes(noteLines, canvasWidth, topY) {
 
 function drawArrow(x1, y1, x2, y2, color) {
   const headLen = 10;
+  const headHalfWidth = 5;
   const angle = Math.atan2(y2 - y1, x2 - x1);
+  const unitX = Math.cos(angle);
+  const unitY = Math.sin(angle);
+  const normalX = -unitY;
+  const normalY = unitX;
+  const baseX = x2 - headLen * unitX;
+  const baseY = y2 - headLen * unitY;
 
   ctx.strokeStyle = color;
   ctx.fillStyle = color;
-  ctx.lineWidth = 2.4;
+  ctx.lineWidth = 4.0;
 
   ctx.beginPath();
   ctx.moveTo(x1, y1);
-  ctx.lineTo(x2, y2);
+  ctx.lineTo(baseX, baseY);
   ctx.stroke();
 
   ctx.beginPath();
   ctx.moveTo(x2, y2);
-  ctx.lineTo(
-    x2 - headLen * Math.cos(angle - Math.PI / 7),
-    y2 - headLen * Math.sin(angle - Math.PI / 7)
-  );
-  ctx.lineTo(
-    x2 - headLen * Math.cos(angle + Math.PI / 7),
-    y2 - headLen * Math.sin(angle + Math.PI / 7)
-  );
+  ctx.lineTo(baseX + headHalfWidth * normalX, baseY + headHalfWidth * normalY);
+  ctx.lineTo(baseX - headHalfWidth * normalX, baseY - headHalfWidth * normalY);
   ctx.closePath();
   ctx.fill();
 }
