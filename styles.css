@@ -121,6 +121,7 @@ select {
 .examples {
   display: grid;
   gap: 0.7rem;
+  margin-top: 0.35rem;
   margin-bottom: 1rem;
 }
 
@@ -153,10 +154,26 @@ select {
   background: #fffdf8;
 }
 
+.example-row--error {
+  border-color: #b00020;
+}
+
 .example-inputs {
   display: grid;
   gap: 0.6rem;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.example-error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: #b00020;
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.example-error:empty {
+  display: none;
 }
 
 .actions {
@@ -197,6 +214,11 @@ button.ghost {
   margin: 0.4rem 0 0.9rem;
   color: #2b3240;
   font-size: 0.95rem;
+}
+
+.form-status:empty {
+  display: none;
+  margin: 0;
 }
 
 .status--success {

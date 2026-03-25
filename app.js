@@ -15,6 +15,7 @@ const canvas = document.getElementById("diagram-canvas");
 const statusEl = document.getElementById("status");
 const downloadPngBtn = document.getElementById("download-png");
 const toolVersionEl = document.getElementById("tool-version");
+const formStatusEl = document.getElementById("form-status");
 
 const TOOL_VERSION = "v003";
 const SINGLE_FUNCTION_SCHEMA_VERSION = 1;
@@ -73,6 +74,17 @@ function bootstrap() {
     }
   });
 
+  examplesContainer.addEventListener("input", (event) => {
+    if (!(event.target instanceof HTMLElement)) {
+      return;
+    }
+
+    const row = event.target.closest(".example-row");
+    if (row) {
+      clearExampleError(row);
+    }
+  });
+
   downloadPngBtn.addEventListener("click", () => {
     const link = document.createElement("a");
     link.download = "exercise-diagram.png";
@@ -88,11 +100,17 @@ function handleSubmit(event) {
 
   try {
     const examples = generateDiagramFromCurrentForm();
+    setFormStatus("");
     setStatus(`Generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
     downloadPngBtn.disabled = false;
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to generate diagram.";
-    setStatus(message, "error");
+    if (isExampleValidationError(error)) {
+      setExampleError(error.exampleIndex, message);
+      setFormStatus("Please fix the highlighted example.", "error");
+    } else {
+      setFormStatus(message, "error");
+    }
     downloadPngBtn.disabled = true;
   }
 }
@@ -129,7 +147,7 @@ function handleExportJson() {
   link.click();
   URL.revokeObjectURL(url);
 
-  setStatus("Exported JSON file.", "success");
+  setFormStatus("Exported JSON file.", "success");
 }
 
 async function handleImportJsonFile(event) {
@@ -147,15 +165,21 @@ async function handleImportJsonFile(event) {
     try {
       const examples = generateDiagramFromCurrentForm();
       downloadPngBtn.disabled = false;
-      setStatus(`Imported JSON and generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
-    } catch {
+      setFormStatus(`Imported and generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
+      setStatus(`Generated ${examples.length} component${examples.length > 1 ? "s" : ""}.`, "success");
+    } catch (error) {
       downloadPngBtn.disabled = true;
-      setStatus("Imported JSON. Review the form and generate the diagram when ready.", "success");
+      if (isExampleValidationError(error)) {
+        setExampleError(error.exampleIndex, error.message);
+        setFormStatus("Imported, but there are issues in a highlighted example.", "error");
+      } else {
+        setFormStatus("Imported. Review the form and generate the diagram when ready.", "success");
+      }
     }
   } catch (error) {
     downloadPngBtn.disabled = true;
     const message = error instanceof Error ? error.message : "Unable to import JSON file.";
-    setStatus(message, "error");
+    setFormStatus(message, "error");
   } finally {
     event.target.value = "";
   }
@@ -172,6 +196,20 @@ function setStatus(message, variant) {
 
   if (variant === "error") {
     statusEl.classList.add("status--error");
+  }
+}
+
+function setFormStatus(message, variant) {
+  formStatusEl.textContent = message;
+  formStatusEl.classList.remove("status--success", "status--error");
+
+  if (variant === "success") {
+    formStatusEl.classList.add("status--success");
+    return;
+  }
+
+  if (variant === "error") {
+    formStatusEl.classList.add("status--error");
   }
 }
 
@@ -320,6 +358,7 @@ function syncExampleInputsWithDefinitions() {
     const existingValues = [...row.querySelectorAll(".example-arg-input")].map((el) => el.value);
     const inputsWrap = row.querySelector(".example-inputs");
     renderExampleInputs(inputsWrap, argumentKinds, existingValues);
+    clearExampleError(row);
   });
 }
 
@@ -346,6 +385,7 @@ function renderExampleInputs(inputsWrap, argumentKinds, existingValues = []) {
 
 function collectExamples(argumentKinds, outputKind) {
   const rows = [...examplesContainer.querySelectorAll(".example-row")];
+  clearExampleErrors();
 
   return rows
     .map((row, rowIndex) => {
@@ -359,21 +399,32 @@ function collectExamples(argumentKinds, outputKind) {
       const inputs = argInputs.map((inputEl, argIndex) => {
         const raw = inputEl.value.trim();
         if (!raw) {
-          throw new Error(`Example ${rowIndex + 1}: argument ${argIndex + 1} is empty.`);
+          throw createExampleValidationError(
+            `Example ${rowIndex + 1}: argument ${argIndex + 1} is empty.`,
+            rowIndex
+          );
         }
 
-        return parseValue(raw, argumentKinds[argIndex], `example ${rowIndex + 1} argument ${argIndex + 1}`);
+        return parseValue(raw, argumentKinds[argIndex], {
+          exampleIndex: rowIndex,
+          subject: `argument ${argIndex + 1}`,
+        });
       });
 
-      const output = parseValue(outputRaw, outputKind, `example ${rowIndex + 1} output`);
+      const output = parseValue(outputRaw, outputKind, {
+        exampleIndex: rowIndex,
+        subject: "output",
+      });
       return { inputs, output };
     })
     .filter(Boolean);
 }
 
-function parseValue(raw, kind, label) {
+function parseValue(raw, kind, context) {
+  const rawText = raw.trim();
+
   if (kind === "array") {
-    const constructorMatch = raw.trim().match(/^new\s+int\s*\[\s*(-?\d+)\s*\]$/i);
+    const constructorMatch = rawText.match(/^new\s+int\s*\[\s*(-?\d+)\s*\]$/i);
     if (constructorMatch) {
       const size = Number(constructorMatch[1]);
       return {
@@ -383,30 +434,99 @@ function parseValue(raw, kind, label) {
       };
     }
 
-    const normalized = raw
+    if (!looksLikeArrayInput(rawText)) {
+      throw createExampleValidationError(
+        `Example ${context.exampleIndex + 1}: ${context.subject} is defined as array, but the input is scalar.`,
+        context.exampleIndex
+      );
+    }
+
+    const normalized = rawText
       .replace(/^\s*\{/, "[")
       .replace(/\}\s*$/, "]")
       .trim();
 
     if (!normalized.startsWith("[") || !normalized.endsWith("]")) {
-      throw new Error(`Expected ${label} as array (e.g. {1,2,3} or new int[0]).`);
+      throw createExampleValidationError(
+        `Example ${context.exampleIndex + 1}: ${context.subject} is defined as array, but the format is invalid. Use {1,2,3} or new int[0].`,
+        context.exampleIndex
+      );
     }
 
     let parsed;
     try {
       parsed = JSON.parse(normalized);
     } catch {
-      throw new Error(`Could not parse ${label} array.`);
+      throw createExampleValidationError(
+        `Example ${context.exampleIndex + 1}: ${context.subject} is defined as array, but the array could not be parsed.`,
+        context.exampleIndex
+      );
     }
 
     if (!Array.isArray(parsed)) {
-      throw new Error(`Expected ${label} as array.`);
+      throw createExampleValidationError(
+        `Example ${context.exampleIndex + 1}: ${context.subject} is defined as array, but the input is scalar.`,
+        context.exampleIndex
+      );
     }
 
     return parsed.map((item) => normalizeScalar(item));
   }
 
-  return normalizeScalar(raw);
+  if (looksLikeArrayInput(rawText)) {
+    throw createExampleValidationError(
+      `Example ${context.exampleIndex + 1}: ${context.subject} is defined as scalar, but the input is array.`,
+      context.exampleIndex
+    );
+  }
+
+  return normalizeScalar(rawText);
+}
+
+function looksLikeArrayInput(text) {
+  return /^\s*\{.*\}\s*$/.test(text) || /^\s*\[.*\]\s*$/.test(text) || /^\s*new\s+int\s*\[/i.test(text);
+}
+
+function createExampleValidationError(message, exampleIndex) {
+  const error = new Error(message);
+  error.exampleIndex = exampleIndex;
+  return error;
+}
+
+function isExampleValidationError(error) {
+  return Boolean(
+    error &&
+    typeof error === "object" &&
+    Number.isInteger(error.exampleIndex) &&
+    error.exampleIndex >= 0
+  );
+}
+
+function clearExampleErrors() {
+  const rows = [...examplesContainer.querySelectorAll(".example-row")];
+  rows.forEach((row) => clearExampleError(row));
+}
+
+function clearExampleError(row) {
+  row.classList.remove("example-row--error");
+  const errorEl = row.querySelector(".example-error");
+  if (errorEl) {
+    errorEl.textContent = "";
+  }
+}
+
+function setExampleError(exampleIndex, message) {
+  const rows = [...examplesContainer.querySelectorAll(".example-row")];
+  const targetRow = rows[exampleIndex];
+  if (!targetRow) {
+    return;
+  }
+
+  targetRow.classList.add("example-row--error");
+  const errorEl = targetRow.querySelector(".example-error");
+  if (errorEl) {
+    errorEl.textContent = message;
+  }
 }
 
 function normalizeScalar(value) {

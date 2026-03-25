@@ -20,6 +20,7 @@
     <section class="card form-card">
       <h2>Exercise Input</h2>
       <form id="exercise-form">
+        <p id="form-status" class="status form-status" aria-live="polite"></p>
         <div class="grid two">
           <label>
             Function name <span class="required-star">*</span>
@@ -88,6 +89,7 @@
         <input class="example-output" type="text" placeholder="3">
       </label>
       <button class="remove-example ghost" type="button">Remove</button>
+      <p class="example-error" aria-live="polite"></p>
     </div>
   </template>
 
