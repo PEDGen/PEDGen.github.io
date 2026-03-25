@@ -17,7 +17,7 @@ const downloadPngBtn = document.getElementById("download-png");
 const toolVersionEl = document.getElementById("tool-version");
 const formStatusEl = document.getElementById("form-status");
 
-const TOOL_VERSION = "v003";
+const TOOL_VERSION = "v004";
 const SINGLE_FUNCTION_SCHEMA_VERSION = 1;
 
 const ctx = canvas.getContext("2d");

@@ -11,16 +11,14 @@ This tool was built to generate diagrams that replace natural language programmi
 
 This was motivated by GenAI's capacity to generate code from natural language descriptions. See the referenced paper for more information.
 
-## Features (v003)
+## Features (v004)
 
-Supports creating diagrams for
-  - array -> scalar
-  - array -> array
-  - scalar -> array
-  - scalar -> scalar
-  - array & scalar -> array
+Supports creating diagrams for functions that receive and produce:
+  - arrays
+  - scalars
+  - mixed types
 
-Also supports functions with multiple arguments (e.g. Argument 1 = array, Argument 2 = scalar).
+Supports functions with multiple arguments (e.g. Argument 1 = array, Argument 2 = scalar).
 
 Single-function exercises can also be exported to and imported from JSON files.
 
@@ -50,7 +48,7 @@ Example JSON:
 {
   "schemaVersion": 1,
   "mode": "single-function",
-  "toolVersion": "v003",
+  "toolVersion": "v004",
   "functionName": "f04",
   "additionalNotes": "Multiply each array element by the scalar argument.",
   "argumentCount": 2,
